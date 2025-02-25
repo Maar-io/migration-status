@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Contract Status Checker</title>
-    <script src="https://cdn.jsdelivr.net/npm/viem@2.7.12/dist/index.js"></script>
+    <title>Migration Status Checker</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -38,7 +37,7 @@
     </style>
 </head>
 <body>
-    <h1>Contract Status Checker</h1>
+    <h1>Migration Status Checker</h1>
     <div id="loading" class="loading">Loading contract statuses...</div>
     <table id="resultsTable" style="display: none;">
         <thead>
@@ -51,7 +50,24 @@
         <tbody id="resultsBody"></tbody>
     </table>
 
-    <script>
+    <script type="module">
+        import { createPublicClient, http, defineChain } from 'https://esm.sh/viem@2.7.12';
+
+        // Define Soneium chain
+        const soneium = defineChain({
+            id: 1868,
+            name: 'Soneium',
+            network: 'soneium',
+            nativeCurrency: {
+                decimals: 18,
+                name: 'Soneium',
+                symbol: 'SON',
+            },
+            rpcUrls: {
+                default: { http: ['https://rpc.soneium.org'] },
+                public: { http: ['https://rpc.soneium.org'] },
+            },
+        });
         const DEPLOYER_ADDRESS = '0xEE70e6d461F0888Fd9DB60cb5B2e933adF5f4c7C';
         const ABI = [
             {
@@ -141,9 +157,9 @@
         };
 
         async function checkContracts() {
-            const client = viem.createPublicClient({
-                chain: viem.soneium,
-                transport: viem.http()
+            const client = createPublicClient({
+                chain: soneium,
+                transport: http()
             });
 
             const resultsBody = document.getElementById('resultsBody');
