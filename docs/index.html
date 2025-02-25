@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Contract Status Checker</title>
+    <script src="https://cdn.jsdelivr.net/npm/viem@2.7.12/dist/index.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status-error { color: #ff0000; }
+        .status-success { color: #008000; }
+        .loading {
+            text-align: center;
+            margin: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Contract Status Checker</h1>
+    <div id="loading" class="loading">Loading contract statuses...</div>
+    <table id="resultsTable" style="display: none;">
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>Ownership Transferred</th>
+                <th>Pause Status</th>
+            </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+    </table>
+
+    <script>
+        const DEPLOYER_ADDRESS = '0xEE70e6d461F0888Fd9DB60cb5B2e933adF5f4c7C';
+        const ABI = [
+            {
+                inputs: [],
+                name: 'paused',
+                outputs: [{ name: '', type: 'bool' }],
+                stateMutability: 'view',
+                type: 'function',
+            },
+            {
+                inputs: [],
+                name: 'owner',
+                outputs: [{ name: '', type: 'address' }],
+                stateMutability: 'view',
+                type: 'function',
+            }
+        ];
+
+        const contracts = {
+            "Yoki": { "address": "0x5f2a5818DF3216Aa6ac44632541db8F3EC4e9954" },
+            // ... paste all other contracts here
+        };
+
+        async function checkContracts() {
+            const client = viem.createPublicClient({
+                chain: viem.soneium,
+                transport: viem.http()
+            });
+
+            const resultsBody = document.getElementById('resultsBody');
+
+            for (const [projectName, contractInfo] of Object.entries(contracts)) {
+                try {
+                    const isPaused = await client.readContract({
+                        address: contractInfo.address,
+                        abi: ABI,
+                        functionName: 'paused',
+                    });
+
+                    let ownershipStatus;
+                    if (projectName === 'Yoki') {
+                        ownershipStatus = '🟢 Internal';
+                    } else {
+                        const currentOwner = await client.readContract({
+                            address: contractInfo.address,
+                            abi: ABI,
+                            functionName: 'owner',
+                        });
+                        ownershipStatus = currentOwner.toLowerCase() !== DEPLOYER_ADDRESS.toLowerCase()
+                            ? '🟢 transferred'
+                            : '🔴 not transferred';
+                    }
+
+                    const row = resultsBody.insertRow();
+                    row.insertCell(0).textContent = projectName;
+                    row.insertCell(1).textContent = ownershipStatus;
+                    row.insertCell(2).textContent = isPaused ? '🔴 PAUSED' : '🟢 active';
+
+                } catch (error) {
+                    const row = resultsBody.insertRow();
+                    row.insertCell(0).textContent = projectName;
+                    row.insertCell(1).textContent = '❌ error';
+                    row.insertCell(2).textContent = '❌ error';
+                }
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('resultsTable').style.display = 'table';
+        }
+
+        checkContracts().catch(console.error);
+    </script>
+</body>
+</html>
